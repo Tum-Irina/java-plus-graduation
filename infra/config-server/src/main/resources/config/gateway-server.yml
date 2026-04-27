@@ -1,9 +1,12 @@
+server:
+  port: 8080
+
 spring:
   cloud:
     gateway:
       routes:
-        - id: ewm-main-service-route
-          uri: lb://ewm-main-service
+        - id: main-service-route
+          uri: lb://main-service
           predicates:
             - Path=/categories/**, /compilations/**, /events/**, /users/**, /admin/**, /comments/**
           filters:
