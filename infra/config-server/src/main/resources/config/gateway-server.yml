@@ -1,0 +1,50 @@
+server:
+  port: 8080
+
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: main-service-route
+          uri: lb://main-service
+          predicates:
+            - Path=/categories/**, /compilations/**, /events/**, /users/**, /admin/**, /comments/**
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses:
+                  - INTERNAL_SERVER_ERROR
+                  - BAD_GATEWAY
+                  - SERVICE_UNAVAILABLE
+                methods: GET
+                exceptions:
+                  - java.net.ConnectException
+                  - org.springframework.web.client.ResourceAccessException
+
+        - id: stats-server-route
+          uri: lb://stats-server
+          predicates:
+            - Path=/hit, /stats
+          filters:
+            - name: Retry
+              args:
+                retries: 3
+                statuses:
+                  - INTERNAL_SERVER_ERROR
+                  - SERVICE_UNAVAILABLE
+                methods: GET,POST
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    gateway:
+      enabled: true
+
+logging:
+  level:
+    ru.practicum: DEBUG
+    org.springframework.cloud.gateway: DEBUG
