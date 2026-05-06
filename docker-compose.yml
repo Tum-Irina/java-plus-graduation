@@ -4,3 +4,15 @@ services:
 
   ewm-db:
     image: postgres:16.1
+
+  user-db:
+    image: postgres:16.1
+
+  request-db:
+    image: postgres:16.1
+
+  comment-db:
+    image: postgres:16.1
+
+  event-db:
+    image: postgres:16.1

@@ -5,10 +5,83 @@ spring:
   cloud:
     gateway:
       routes:
-        - id: main-service-route
-          uri: lb://main-service
+        # Запросы к заявкам
+        - id: request-service-route
+          uri: lb://request-service
           predicates:
-            - Path=/categories/**, /compilations/**, /events/**, /users/**, /admin/**, /comments/**
+            - Path=/users/*/events/*/requests, /users/*/requests, /users/*/requests/*/cancel
+          filters:
+            - StripPrefix=0
+
+        # Запросы к комментариям пользователя
+        - id: comment-service-route
+          uri: lb://comment-service
+          predicates:
+            - Path=/users/*/comments/**, /admin/comments/**, /comments/**
+          filters:
+            - StripPrefix=0
+
+        # Запросы к событиям пользователя
+        - id: user-events-route
+          uri: lb://event-service
+          predicates:
+            - Path=/users/*/events/**
+          filters:
+            - StripPrefix=0
+
+        # Администрирование пользователей
+        - id: user-service-route
+          uri: lb://user-service
+          predicates:
+            - Path=/admin/users/**
+          filters:
+            - StripPrefix=0
+
+        # Администрирование подборок
+        - id: admin-compilations-route
+          uri: lb://event-service
+          predicates:
+            - Path=/admin/compilations/**
+          filters:
+            - StripPrefix=0
+
+        # Администрирование категорий
+        - id: admin-categories-route
+          uri: lb://event-service
+          predicates:
+            - Path=/admin/categories/**
+          filters:
+            - StripPrefix=0
+
+        # Администрирование событий
+        - id: admin-events-route
+          uri: lb://event-service
+          predicates:
+            - Path=/admin/events/**
+          filters:
+            - StripPrefix=0
+
+        # Публичные подборки
+        - id: compilations-route
+          uri: lb://event-service
+          predicates:
+            - Path=/compilations/**
+          filters:
+            - StripPrefix=0
+
+        # Публичные категории
+        - id: categories-route
+          uri: lb://event-service
+          predicates:
+            - Path=/categories/**
+          filters:
+            - StripPrefix=0
+
+        # Публичные эндпоинты событий
+        - id: event-service-route
+          uri: lb://event-service
+          predicates:
+            - Path=/events/**
           filters:
             - name: Retry
               args:
@@ -22,6 +95,7 @@ spring:
                   - java.net.ConnectException
                   - org.springframework.web.client.ResourceAccessException
 
+        # Статистика
         - id: stats-server-route
           uri: lb://stats-server
           predicates:
