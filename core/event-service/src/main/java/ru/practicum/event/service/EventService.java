@@ -1,4 +1,4 @@
-package ru.practicum.event;
+package ru.practicum.event.service;
 
 import ru.practicum.event.dto.*;
 import ru.practicum.event.params.AdminEventsParam;

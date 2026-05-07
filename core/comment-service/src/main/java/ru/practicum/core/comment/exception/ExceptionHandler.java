@@ -1,14 +1,12 @@
-package ru.practicum.exception;
+package ru.practicum.core.comment.exception;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import ru.practicum.core.exception.ConditionsNotMetException;
 import ru.practicum.core.exception.ConflictException;
 import ru.practicum.core.exception.NotFoundException;
 import ru.practicum.core.exception.ValidationException;
@@ -18,9 +16,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class ExceptionHandler {
 
-    @ExceptionHandler(NotFoundException.class)
+    @org.springframework.web.bind.annotation.ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public Map<String, Object> handleNotFoundException(NotFoundException e) {
         Map<String, Object> response = new HashMap<>();
@@ -32,7 +30,7 @@ public class GlobalExceptionHandler {
         return response;
     }
 
-    @ExceptionHandler({
+    @org.springframework.web.bind.annotation.ExceptionHandler({
             ValidationException.class,
             NumberFormatException.class,
             IllegalArgumentException.class,
@@ -49,7 +47,7 @@ public class GlobalExceptionHandler {
         return response;
     }
 
-    @ExceptionHandler(ConflictException.class)
+    @org.springframework.web.bind.annotation.ExceptionHandler(ConflictException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public Map<String, Object> handleConflictException(ConflictException e) {
         Map<String, Object> response = new HashMap<>();
@@ -61,7 +59,7 @@ public class GlobalExceptionHandler {
         return response;
     }
 
-    @ExceptionHandler(DataIntegrityViolationException.class)
+    @org.springframework.web.bind.annotation.ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public Map<String, Object> handleDataIntegrityViolationException(DataIntegrityViolationException e) {
         Map<String, Object> response = new HashMap<>();
@@ -73,7 +71,7 @@ public class GlobalExceptionHandler {
         return response;
     }
 
-    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @org.springframework.web.bind.annotation.ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, Object> handleValidationExceptions(MethodArgumentNotValidException e) {
         Map<String, Object> response = new HashMap<>();
@@ -88,19 +86,7 @@ public class GlobalExceptionHandler {
         return response;
     }
 
-    @ExceptionHandler(ConditionsNotMetException.class)
-    @ResponseStatus(HttpStatus.CONFLICT)
-    public Map<String, Object> handleConditionsNotMetException(ConditionsNotMetException e) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "FORBIDDEN");
-        response.put("reason", "For the requested operation the conditions are not met.");
-        response.put("message", e.getMessage());
-        response.put("timestamp", LocalDateTime.now()
-                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-        return response;
-    }
-
-    @ExceptionHandler(MissingServletRequestParameterException.class)
+    @org.springframework.web.bind.annotation.ExceptionHandler(MissingServletRequestParameterException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, Object> handleMissingParams(MissingServletRequestParameterException e) {
         Map<String, Object> response = new HashMap<>();

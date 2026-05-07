@@ -1,7 +1,8 @@
-package ru.practicum.event;
+package ru.practicum.event.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.PageRequest;
@@ -14,6 +15,7 @@ import ru.practicum.category.CategoryRepository;
 import ru.practicum.core.client.CommentClient;
 import ru.practicum.core.client.RequestClient;
 import ru.practicum.core.client.UserClient;
+import ru.practicum.event.*;
 import ru.practicum.event.dto.*;
 import ru.practicum.event.params.AdminEventsParam;
 import ru.practicum.event.params.PublicEventsParam;
@@ -46,6 +48,9 @@ public class EventServiceImpl implements EventService {
     private final RequestClient requestClient;
     private final CommentClient commentClient;
 
+    @Value("${spring.application.name}")
+    private String appName;
+
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter
             .ofPattern("yyyy-MM-dd HH:mm:ss")
             .withZone(ZoneOffset.UTC);
@@ -65,11 +70,7 @@ public class EventServiceImpl implements EventService {
         Pageable pageable = PageRequest.of(from, size, Sort.by("eventDate"));
         List<Event> events = eventRepository.findByInitiatorId(initiatorId, pageable).getContent();
 
-        UserDto initiatorDto = userClient.getUserById(initiatorId);
-        UserShortDto initiatorShort = UserShortDto.builder()
-                .id(initiatorDto.getId())
-                .name(initiatorDto.getName())
-                .build();
+        UserShortDto initiatorShort = getUserShortDto(initiatorId);
 
         Map<Long, Long> views = getViews(events);
         List<EventShortDto> eventsShortDto = events
@@ -103,8 +104,6 @@ public class EventServiceImpl implements EventService {
     public EventFullDto createEvent(NewEventDto newEventDto, Long initiatorId) {
         log.info("Создание нового события");
 
-        UserDto initiatorDto = userClient.getUserById(initiatorId);
-
         Category category = categoryRepository.findById(newEventDto.getCategory())
                 .orElseThrow(() -> new NotFoundException("Категория события не найдена"));
 
@@ -123,10 +122,7 @@ public class EventServiceImpl implements EventService {
 
         Event savedEvent = eventRepository.save(event);
 
-        UserShortDto initiatorShort = UserShortDto.builder()
-                .id(initiatorDto.getId())
-                .name(initiatorDto.getName())
-                .build();
+        UserShortDto initiatorShort = getUserShortDto(initiatorId);
 
         EventFullDto eventFullDto = EventMapper.toFullDto(savedEvent, initiatorShort);
         eventFullDto.setViews(0L);
@@ -146,11 +142,7 @@ public class EventServiceImpl implements EventService {
             throw new NotFoundException("Инициатор события не найден");
         }
 
-        UserDto initiatorDto = userClient.getUserById(event.getInitiatorId());
-        UserShortDto initiatorShort = UserShortDto.builder()
-                .id(initiatorDto.getId())
-                .name(initiatorDto.getName())
-                .build();
+        UserShortDto initiatorShort = getUserShortDto(event.getInitiatorId());
 
         EventFullDto eventFullDto = EventMapper.toFullDto(event, initiatorShort);
         List<String> uris = new ArrayList<>();
@@ -227,11 +219,7 @@ public class EventServiceImpl implements EventService {
 
         Event updatedEvent = eventRepository.save(oldEvent);
 
-        UserDto initiatorDto = userClient.getUserById(updatedEvent.getInitiatorId());
-        UserShortDto initiatorShort = UserShortDto.builder()
-                .id(initiatorDto.getId())
-                .name(initiatorDto.getName())
-                .build();
+        UserShortDto initiatorShort = getUserShortDto(updatedEvent.getInitiatorId());
 
         EventFullDto eventFullDto = EventMapper.toFullDto(updatedEvent, initiatorShort);
         List<String> uris = new ArrayList<>();
@@ -310,11 +298,7 @@ public class EventServiceImpl implements EventService {
 
         Event updatedEvent = eventRepository.save(oldEvent);
 
-        UserDto initiatorDto = userClient.getUserById(updatedEvent.getInitiatorId());
-        UserShortDto initiatorShort = UserShortDto.builder()
-                .id(initiatorDto.getId())
-                .name(initiatorDto.getName())
-                .build();
+        UserShortDto initiatorShort = getUserShortDto(updatedEvent.getInitiatorId());
 
         EventFullDto eventFullDto = EventMapper.toFullDto(updatedEvent, initiatorShort);
         List<String> uris = new ArrayList<>();
@@ -348,11 +332,7 @@ public class EventServiceImpl implements EventService {
 
         Map<Long, UserShortDto> usersMap = new HashMap<>();
         for (Long id : initiatorIds) {
-            UserDto userDto = userClient.getUserById(id);
-            usersMap.put(id, UserShortDto.builder()
-                    .id(userDto.getId())
-                    .name(userDto.getName())
-                    .build());
+            usersMap.put(id, getUserShortDto(id));
         }
 
         Map<Long, Long> views = getViews(events);
@@ -384,7 +364,7 @@ public class EventServiceImpl implements EventService {
                 event.setConfirmedRequests(0L);
             }
         }
-        statsClient.hit("event-service", uri, ip, LocalDateTime.now());
+        statsClient.hit(appName, uri, ip, LocalDateTime.now());
         return eventsShortDto;
     }
 
@@ -400,11 +380,7 @@ public class EventServiceImpl implements EventService {
 
         Map<Long, UserShortDto> usersMap = new HashMap<>();
         for (Long id : initiatorIds) {
-            UserDto userDto = userClient.getUserById(id);
-            usersMap.put(id, UserShortDto.builder()
-                    .id(userDto.getId())
-                    .name(userDto.getName())
-                    .build());
+            usersMap.put(id, getUserShortDto(id));
         }
 
         Map<Long, Long> views = getViews(events);
@@ -443,11 +419,7 @@ public class EventServiceImpl implements EventService {
             throw new NotFoundException("Событие не найдено или недоступно");
         }
 
-        UserDto initiatorDto = userClient.getUserById(event.getInitiatorId());
-        UserShortDto initiatorShort = UserShortDto.builder()
-                .id(initiatorDto.getId())
-                .name(initiatorDto.getName())
-                .build();
+        UserShortDto initiatorShort = getUserShortDto(event.getInitiatorId());
 
         EventFullDto eventFullDto = EventMapper.toFullDto(event, initiatorShort);
         List<String> uris = new ArrayList<>();
@@ -464,7 +436,7 @@ public class EventServiceImpl implements EventService {
         // Добавляем количество комментариев
         eventFullDto.setCommentCount(getCommentCount(eventId));
 
-        statsClient.hit("event-service", uri, ip, LocalDateTime.now());
+        statsClient.hit(appName, uri, ip, LocalDateTime.now());
         return eventFullDto;
     }
 
@@ -498,5 +470,13 @@ public class EventServiceImpl implements EventService {
         eventIds.add(eventId);
         Map<Long, Long> confirmedRequests = getConfirmedRequestsForEvents(eventIds);
         return confirmedRequests.getOrDefault(eventId, 0L);
+    }
+
+    private UserShortDto getUserShortDto(Long userId) {
+        UserDto userDto = userClient.getUserById(userId);
+        return UserShortDto.builder()
+                .id(userDto.getId())
+                .name(userDto.getName())
+                .build();
     }
 }

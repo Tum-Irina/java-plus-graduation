@@ -1,18 +1,71 @@
+x-db-common: &db-common
+  image: postgres:16.1
+  restart: unless-stopped
+
 services:
   stats-db:
-    image: postgres:16.1
-
-  ewm-db:
-    image: postgres:16.1
-
-  user-db:
-    image: postgres:16.1
-
-  request-db:
-    image: postgres:16.1
-
-  comment-db:
-    image: postgres:16.1
+    <<: *db-common
+    container_name: stats-db
+    environment:
+      POSTGRES_DB: ewm-stats
+      POSTGRES_USER: stat
+      POSTGRES_PASSWORD: stat
+    ports:
+      - "5433:5432"
+    volumes:
+      - stats-db-data:/var/lib/postgresql/data
 
   event-db:
-    image: postgres:16.1
+    <<: *db-common
+    container_name: event-db
+    environment:
+      POSTGRES_DB: event-db
+      POSTGRES_USER: event
+      POSTGRES_PASSWORD: event
+    ports:
+      - "5434:5432"
+    volumes:
+      - event-db-data:/var/lib/postgresql/data
+
+  user-db:
+    <<: *db-common
+    container_name: user-db
+    environment:
+      POSTGRES_DB: user-db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: user
+    ports:
+      - "5435:5432"
+    volumes:
+      - user-db-data:/var/lib/postgresql/data
+
+  request-db:
+    <<: *db-common
+    container_name: request-db
+    environment:
+      POSTGRES_DB: request-db
+      POSTGRES_USER: request
+      POSTGRES_PASSWORD: request
+    ports:
+      - "5436:5432"
+    volumes:
+      - request-db-data:/var/lib/postgresql/data
+
+  comment-db:
+    <<: *db-common
+    container_name: comment-db
+    environment:
+      POSTGRES_DB: comment-db
+      POSTGRES_USER: comment
+      POSTGRES_PASSWORD: comment
+    ports:
+      - "5437:5432"
+    volumes:
+      - comment-db-data:/var/lib/postgresql/data
+
+volumes:
+  stats-db-data:
+  event-db-data:
+  user-db-data:
+  request-db-data:
+  comment-db-data:
