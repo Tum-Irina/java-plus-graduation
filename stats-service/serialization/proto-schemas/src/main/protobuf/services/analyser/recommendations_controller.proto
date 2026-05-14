@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package stats.service.analyzer;
+package stats.service.dashboard;
 
 import "messages/recommended_event.proto";
 import "messages/user_predictions_request.proto";
