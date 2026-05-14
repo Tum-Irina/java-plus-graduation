@@ -43,8 +43,29 @@ public class PublicEventController {
 
     @GetMapping("/{eventId}")
     @ResponseStatus(HttpStatus.OK)
-    public EventFullDto findById(@PathVariable Long eventId, HttpServletRequest request) {
-        log.info("Получение полной информации о событии");
-        return eventService.findById(eventId, request.getRemoteAddr(), request.getRequestURI());
+    public EventFullDto findById(@PathVariable Long eventId,
+                                 HttpServletRequest request,
+                                 @RequestHeader(value = "X-EWM-USER-ID", required = false) Long userId) {
+        log.info("Получение полной информации о событии. eventId={}, userId={}", eventId, userId);
+
+        Long actualUserId = userId != null ? userId : 0L;
+
+        return eventService.findById(eventId, request.getRemoteAddr(), request.getRequestURI(), actualUserId);
+    }
+
+    @PutMapping("/{eventId}/like")
+    @ResponseStatus(HttpStatus.OK)
+    public void likeEvent(@PathVariable Long eventId,
+                          @RequestHeader("X-EWM-USER-ID") Long userId) {
+        log.info("PUT /events/{}/like, userId={}", eventId, userId);
+        eventService.likeEvent(userId, eventId);
+    }
+
+    @GetMapping("/recommendations")
+    @ResponseStatus(HttpStatus.OK)
+    public List<EventShortDto> getRecommendations(@RequestHeader("X-EWM-USER-ID") Long userId,
+                                                  @RequestParam(defaultValue = "10") Integer maxResults) {
+        log.info("GET /events/recommendations, userId={}, maxResults={}", userId, maxResults);
+        return eventService.getRecommendations(userId, maxResults);
     }
 }

@@ -14,7 +14,9 @@ import ru.practicum.core.request.mapper.RequestMapper;
 import ru.practicum.core.request.model.Request;
 import ru.practicum.core.request.model.RequestStatus;
 import ru.practicum.core.request.repository.RequestRepository;
+import ru.practicum.stats.client.CollectorClient;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
@@ -29,6 +31,7 @@ public class RequestServiceImpl implements RequestService {
     private final RequestRepository requestRepository;
     private final UserClient userClient;
     private final EventClient eventClient;
+    private final CollectorClient collectorClient;
 
     // Добавление запроса на участие в событии
     @Override
@@ -64,6 +67,8 @@ public class RequestServiceImpl implements RequestService {
 
         Request savedRequest = requestRepository.save(request);
         log.info("Запрос успешно создан: requestId = {}, status = {}", savedRequest.getId(), savedRequest.getStatus());
+
+        collectorClient.sendRegisterEvent(userId, eventId, Instant.now());
 
         return RequestMapper.toDto(savedRequest);
     }
