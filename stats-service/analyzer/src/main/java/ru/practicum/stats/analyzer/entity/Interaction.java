@@ -1,19 +1,20 @@
 package ru.practicum.stats.analyzer.entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.util.Objects;
 
 @Entity
 @Table(name = "interactions", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"user_id", "event_id"})
 })
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(exclude = "id")
 public class Interaction {
 
     @Id
@@ -31,4 +32,18 @@ public class Interaction {
 
     @Column(name = "updated_at", nullable = false)
     private Long updatedAt;
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Interaction that = (Interaction) o;
+        return Objects.equals(userId, that.userId) &&
+                Objects.equals(eventId, that.eventId);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(userId, eventId);
+    }
 }

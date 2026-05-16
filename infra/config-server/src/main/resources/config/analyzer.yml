@@ -40,6 +40,9 @@ grpc:
   server:
     port: 0
 
+recommendations:
+  max-similar-events-per-interaction: 100
+
 management:
   endpoints:
     web:

@@ -42,7 +42,7 @@ public class KafkaConfig {
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new LongDeserializer(),
-                new AvroDeserializer<>(UserActionAvro.class)
+                new AvroDeserializer<>(UserActionAvro.getClassSchema())
         );
     }
 
@@ -68,7 +68,7 @@ public class KafkaConfig {
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new StringDeserializer(),
-                new AvroDeserializer<>(EventsSimilarityAvro.class)
+                new AvroDeserializer<>(EventsSimilarityAvro.getClassSchema())
         );
     }
 

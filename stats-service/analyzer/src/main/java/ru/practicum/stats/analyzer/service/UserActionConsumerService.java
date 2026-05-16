@@ -61,7 +61,7 @@ public class UserActionConsumerService {
 
         } catch (Exception e) {
             log.error("Ошибка обработки UserAction", e);
-            ack.acknowledge();
+            throw new RuntimeException("Ошибка обработки UserAction", e);
         }
     }
 }

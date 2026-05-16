@@ -33,14 +33,13 @@ public class EventSimilarityConsumerService {
 
             log.debug("Получено EventsSimilarity: eventA={}, eventB={}, score={}", eventA, eventB, score);
 
+            Optional<EventSimilarityEntity> existingEntity = similarityRepository.findByEventAAndEventB(eventA, eventB);
+
             if (score <= 0) {
-                Optional<EventSimilarityEntity> existing = similarityRepository.findByEventAAndEventB(eventA, eventB);
-                existing.ifPresent(similarityRepository::delete);
+                existingEntity.ifPresent(similarityRepository::delete);
                 ack.acknowledge();
                 return;
             }
-
-            Optional<EventSimilarityEntity> existingEntity = similarityRepository.findByEventAAndEventB(eventA, eventB);
 
             if (existingEntity.isPresent()) {
                 EventSimilarityEntity entity = existingEntity.get();
@@ -67,7 +66,7 @@ public class EventSimilarityConsumerService {
 
         } catch (Exception e) {
             log.error("Ошибка обработки EventsSimilarity", e);
-            ack.acknowledge();
+            throw new RuntimeException("Ошибка обработки EventsSimilarity", e);
         }
     }
 }

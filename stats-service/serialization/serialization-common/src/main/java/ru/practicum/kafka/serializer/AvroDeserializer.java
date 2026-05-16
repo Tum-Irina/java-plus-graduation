@@ -1,5 +1,6 @@
 package ru.practicum.kafka.serializer;
 
+import org.apache.avro.Schema;
 import org.apache.avro.io.BinaryDecoder;
 import org.apache.avro.io.DatumReader;
 import org.apache.avro.io.DecoderFactory;
@@ -10,18 +11,11 @@ import org.apache.kafka.common.serialization.Deserializer;
 
 public class AvroDeserializer<T extends SpecificRecordBase> implements Deserializer<T> {
 
-    private final DecoderFactory decoderFactory = DecoderFactory.get();
-    private final Class<T> targetClass;
+    private static final DecoderFactory DECODER_FACTORY = DecoderFactory.get();
     private final DatumReader<T> reader;
-    private BinaryDecoder decoder;
 
-    public AvroDeserializer(Class<T> targetClass) {
-        this.targetClass = targetClass;
-        try {
-            this.reader = new SpecificDatumReader<>(targetClass.newInstance().getSchema());
-        } catch (InstantiationException | IllegalAccessException e) {
-            throw new RuntimeException("Failed to create Avro deserializer for " + targetClass, e);
-        }
+    public AvroDeserializer(Schema schema) {
+        this.reader = new SpecificDatumReader<>(schema);
     }
 
     @Override
@@ -31,7 +25,7 @@ public class AvroDeserializer<T extends SpecificRecordBase> implements Deseriali
         }
 
         try {
-            decoder = decoderFactory.binaryDecoder(data, decoder);
+            BinaryDecoder decoder = DECODER_FACTORY.binaryDecoder(data, null);
             return reader.read(null, decoder);
         } catch (Exception e) {
             throw new SerializationException("Ошибка десериализации данных из топика " + topic, e);

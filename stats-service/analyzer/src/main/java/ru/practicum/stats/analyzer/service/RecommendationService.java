@@ -2,8 +2,13 @@ package ru.practicum.stats.analyzer.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.practicum.stats.analyzer.projection.EventWeightByEventIdProjection;
+import ru.practicum.stats.analyzer.projection.EventWeightProjection;
+import ru.practicum.stats.analyzer.projection.SimilarEventProjection;
+import ru.practicum.stats.analyzer.projection.SourceSimilarEventProjection;
 import ru.practicum.stats.analyzer.repository.InteractionRepository;
 import ru.practicum.stats.analyzer.repository.SimilarityRepository;
 import ru.practicum.stats.proto.RecommendedEventProto;
@@ -20,47 +25,52 @@ public class RecommendationService {
     private final InteractionRepository interactionRepository;
     private final SimilarityRepository similarityRepository;
 
+    @Value("${recommendations.max-similar-events-per-interaction:100}")
+    private int maxSimilarEventsPerInteraction;
+
     // Список рекомендуемых мероприятий для пользователя на основе истории взаимодействий пользователя и сходства мероприятий
     public List<RecommendedEventProto> getRecommendationsForUser(long userId, int maxResults) {
         log.info("Поиск рекомендаций для пользователя {}, maxResults={}", userId, maxResults);
 
         // Получаем мероприятия, с которыми взаимодействовал пользователь (с весами)
-        List<Object[]> userInteractions = interactionRepository.findEventIdsAndWeightsByUserId(userId);
+        List<EventWeightProjection> userInteractions = interactionRepository.findEventIdsAndWeightsByUserId(userId);
         if (userInteractions.isEmpty()) {
             log.info("Пользователь {} не имеет взаимодействий", userId);
             return Collections.emptyList();
         }
 
-        // Получаем ID мероприятий, с которыми пользователь взаимодействовал
         Set<Long> interactedEventIds = userInteractions.stream()
-                .map(row -> (Long) row[0])
+                .map(EventWeightProjection::getEventId)
                 .collect(Collectors.toSet());
 
-        // Для каждого взаимодействия пользователя находим похожие мероприятия и собираем кандидатов с их оценками
-        Map<Long, Double> candidateScores = new HashMap<>();
+        List<Long> eventIdsList = new ArrayList<>(interactedEventIds);
+        List<SourceSimilarEventProjection> allSimilarEvents =
+                similarityRepository.findTopSimilarEventsForMultipleEvents(eventIdsList, maxSimilarEventsPerInteraction);
+
         Map<Long, Double> userWeights = userInteractions.stream()
                 .collect(Collectors.toMap(
-                        row -> (Long) row[0],
-                        row -> (Double) row[1]
+                        EventWeightProjection::getEventId,
+                        EventWeightProjection::getWeight
                 ));
 
-        for (Long interactedEventId : interactedEventIds) {
-            List<Object[]> similarEvents = similarityRepository.findTopSimilarEvents(interactedEventId, 100);
-            double userWeight = userWeights.get(interactedEventId);
+        Map<Long, Double> candidateScores = new HashMap<>();
 
-            for (Object[] row : similarEvents) {
-                long candidateEventId = (Long) row[0];
-                double similarityScore = (Double) row[1];
+        for (SourceSimilarEventProjection similar : allSimilarEvents) {
+            long sourceEventId = similar.getSourceEventId();
+            long candidateEventId = similar.getOtherEventId();
+            double similarityScore = similar.getScore();
 
-                // Исключаем мероприятия, с которыми пользователь уже взаимодействовал
-                if (interactedEventIds.contains(candidateEventId)) {
-                    continue;
-                }
-
-                // Предсказанная оценка = вес пользователя * коэффициент сходства
-                double predictedScore = userWeight * similarityScore;
-                candidateScores.merge(candidateEventId, predictedScore, Double::sum);
+            if (interactedEventIds.contains(candidateEventId)) {
+                continue;
             }
+
+            double userWeight = userWeights.getOrDefault(sourceEventId, 0.0);
+            if (userWeight <= 0) {
+                continue;
+            }
+
+            double predictedScore = userWeight * similarityScore;
+            candidateScores.merge(candidateEventId, predictedScore, Double::sum);
         }
 
         // Сортируем по убыванию оценки и ограничиваем результат
@@ -80,17 +90,16 @@ public class RecommendationService {
 
         // Получаем мероприятия, с которыми пользователь уже взаимодействовал
         Set<Long> interactedEventIds = interactionRepository.findEventIdsByUserId(userId);
+        List<Long> excludedIds = new ArrayList<>(interactedEventIds);
 
-        // Получаем похожие мероприятия из базы
-        List<Object[]> similarEvents = similarityRepository.findTopSimilarEvents(eventId, maxResults * 2);
+        List<SimilarEventProjection> similarEvents = similarityRepository.findTopSimilarEventsExcluding(
+                eventId, excludedIds, maxResults
+        );
 
-        // Фильтруем уже просмотренные и возвращаем результат
         return similarEvents.stream()
-                .filter(row -> !interactedEventIds.contains((Long) row[0]))
-                .limit(maxResults)
-                .map(row -> RecommendedEventProto.newBuilder()
-                        .setEventId((Long) row[0])
-                        .setScore((Double) row[1])
+                .map(event -> RecommendedEventProto.newBuilder()
+                        .setEventId(event.getOtherEventId())
+                        .setScore(event.getScore())
                         .build())
                 .collect(Collectors.toList());
     }
@@ -104,13 +113,13 @@ public class RecommendationService {
         }
 
         Set<Long> eventIdSet = new HashSet<>(eventIds);
-        List<Object[]> weights = interactionRepository.findWeightsByEventIds(eventIdSet);
+        List<EventWeightByEventIdProjection> weights = interactionRepository.findWeightsByEventIds(eventIdSet);
 
         // Группируем по eventId и суммируем веса
         Map<Long, Double> totalWeights = weights.stream()
                 .collect(Collectors.groupingBy(
-                        row -> (Long) row[0],
-                        Collectors.summingDouble(row -> (Double) row[1])
+                        EventWeightByEventIdProjection::getEventId,
+                        Collectors.summingDouble(EventWeightByEventIdProjection::getWeight)
                 ));
 
         // Возвращаем результат в порядке запрошенных ID
