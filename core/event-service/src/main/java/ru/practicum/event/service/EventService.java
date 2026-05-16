@@ -20,7 +20,11 @@ public interface EventService {
 
     List<EventFullDto> searchEventsByAdmin(AdminEventsParam adminEventsParam);
 
-    EventFullDto findById(Long eventId, String ip, String uri);
+    EventFullDto findById(Long eventId, String ip, String uri, Long userId);
 
     EventFullDto findByIdAndInitiatorId(Long initiatorId, Long eventId);
+
+    void likeEvent(Long userId, Long eventId);
+
+    List<EventShortDto> getRecommendations(Long userId, int maxResults);
 }

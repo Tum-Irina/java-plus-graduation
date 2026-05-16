@@ -1,0 +1,59 @@
+server:
+  port: 0
+
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      auto-offset-reset: latest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: ru.practicum.kafka.serializer.AvroDeserializer
+  sql:
+    init:
+      mode: always
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5438/analyzer-db}
+    username: ${SPRING_DATASOURCE_USERNAME:analyzer}
+    password: ${SPRING_DATASOURCE_PASSWORD:analyzer}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    defer-datasource-initialization: true
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+stats:
+  kafka:
+    topics:
+      user-actions: stats.user-actions.v1
+      events-similarity: stats.events-similarity.v1
+    consumer:
+      user-actions-group-id: analyzer-user-actions-group
+      events-similarity-group-id: analyzer-events-similarity-group
+
+grpc:
+  server:
+    port: 0
+
+recommendations:
+  max-similar-events-per-interaction: 100
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    ru.practicum: DEBUG
+    org.springframework.kafka: INFO
+    org.hibernate.SQL: WARN
